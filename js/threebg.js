@@ -138,7 +138,7 @@ function setupBackground() {
     });
   });
 
-  const cameraX = (geometries.length - 1) / 2;
+  const cameraX = (geometries.length + 2) / 2;
   const cameraY = ((geometries[0]?.length ?? 1) - 1) / 2;
 
   camera.position.z = 5;
