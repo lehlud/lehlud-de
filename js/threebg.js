@@ -166,7 +166,7 @@ function setupBackground() {
   updateCubeRotation();
   window.addEventListener("scroll", updateCubeRotation);
 
-  let previousIntersecting = [];
+  let intersecting = [];
 
   /**
    * @param {MouseEvent} event
@@ -178,17 +178,41 @@ function setupBackground() {
     const vector = new THREE.Vector2(x, y);
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(vector, camera);
-    const intersecting = raycaster.intersectObjects(allGeometries);
+    const intersected = raycaster.intersectObjects(allGeometries);
 
-    previousIntersecting = intersecting.map((object) => {
+    intersecting = intersected.map((object) => {
       return object.object;
     });
 
-    previousIntersecting.forEach((geometry) => {
+    intersecting.forEach((geometry) => {
       geometry.material.color.setHex(0x303030);
     });
   }
   window.addEventListener("mousemove", updateFocused);
+
+  window.addEventListener("click", (event) => {
+    updateFocused(event);
+    if (!intersecting.length) return;
+
+    geometries.forEach((geometries1, i) => {
+      geometries1.forEach((geometry, j) => {
+        if (intersecting.includes(geometry)) {
+          const index = i + j;
+          geometryTypes[index] = (geometryTypes[index] + 1) % generators.length;
+
+          scene.remove(geometry);
+          intersecting.splice(intersecting.indexOf(geometry), 1);
+          allGeometries.splice(allGeometries.indexOf(geometry), 1);
+
+          geometry = generators[geometryTypes[index]]();
+          geometries[i][j] = geometry;
+          scene.add(geometry);
+          intersecting.push(geometry);
+          allGeometries.push(geometry);
+        }
+      });
+    });
+  });
 
   function updateScene() {
     const color = window.currentColor ?? 0x000000;
@@ -203,7 +227,7 @@ function setupBackground() {
         geometry.rotation.y = window.cubeRotationY ?? 0;
         geometry.rotation.x = window.cubeRotationX ?? 0;
 
-        if (previousIntersecting.includes(geometry)) {
+        if (intersecting.includes(geometry)) {
           // create color string with leading zeros
           let colorStr = color.toString(16);
           while (colorStr.length < 6) colorStr = '0' + colorStr;
@@ -218,8 +242,6 @@ function setupBackground() {
           g = g.length < 2 ? ('0' + g) : g;
           b = b.length < 2 ? ('0' + b) : b;
 
-          console.log(color.toString(16), r, g, b, parseInt(r + g + b, 16).toString(16));
-
           geometry.material.color.setHex(parseInt(r + g + b, 16));
         } else {
           geometry.material.color.setHex(color);
@@ -227,27 +249,6 @@ function setupBackground() {
       });
     });
   }
-
-  window.addEventListener("click", (event) => {
-    updateFocused(event);
-    if (!previousIntersecting.length) return;
-
-    geometries.forEach((geometries1, i) => {
-      geometries1.forEach((geometry, j) => {
-        if (previousIntersecting.includes(geometry)) {
-          const index = i + j;
-          geometryTypes[index] = (geometryTypes[index] + 1) % generators.length;
-          scene.remove(geometry);
-
-          const newGeometry = generators[geometryTypes[index]]();
-          geometries[i][j] = newGeometry;
-          scene.add(newGeometry);
-        }
-      });
-    });
-
-    while (previousIntersecting.length) previousIntersecting.pop();
-  });
 
   function animate() {
     requestAnimationFrame(animate);
